@@ -1,101 +1,175 @@
-# RAG Project – Driver’s Handbook Q&A
+# Guardrails for RAG – Nova Scotia Driving Rules Assistant
 
-This project implements a **Retrieval-Augmented Generation (RAG)** pipeline using:
+## 📌 Overview
 
-- **LangChain**
-- **Chroma Vector Database**
-- **Jina Embeddings API**
-- **Hugging Face Transformers (local LLM)**
+This project extends a Retrieval-Augmented Generation (RAG) system with **guardrails**, **prompt-injection defenses**, and **evaluation metrics** as required in Assignment 3.
 
-The system loads a PDF (Driver’s Handbook Chapter 2), splits it into chunks, embeds the text using **Jina Embeddings**, stores vectors in **ChromaDB**, retrieves relevant context, and generates answers using a **local Hugging Face model**. **It accept user questions via command line input.**
+The assistant answers questions **only about Nova Scotia driving rules** using a local vector database built from the Driver’s Handbook (DH-Chapter2.pdf).
 
 ---
 
-## 📂 Project Structure
+## 🎯 Assignment Objectives
 
-Rag_project/
-│── main.py
-│── .env
-│── data/
-│ └── DH-Chapter2.pdf
-│── chroma_db/
-│── output/
-│ └── results.txt
+This implementation demonstrates:
 
----
-
-## ⚙️ Requirements
-
-- Python **3.10+** (Recommended: 3.11 / 3.12 / 3.13)
-- Windows / macOS / Linux
-- Internet connection (for Jina embeddings & first model download)
+- ✅ Input guardrails
+- ✅ Output guardrails
+- ✅ Execution limits
+- ✅ Prompt injection defenses
+- ✅ Evaluation metrics
+- ✅ Structured test logging
 
 ---
 
-## 🚀 Installation Guide
+## 🛡️ Guardrails Implemented
 
-### **1️⃣ Clone the repository**
+### **Input Guardrails**
+
+| Guardrail           | Behavior                                           |
+| ------------------- | -------------------------------------------------- |
+| Query length limit  | Reject queries > 500 characters (`QUERY_TOO_LONG`) |
+| Off-topic detection | Refuse unrelated queries (`OFF_TOPIC`)             |
+| PII detection       | Redact phone/email/license plate (`PII_DETECTED`)  |
+
+---
+
+### **Output Guardrails**
+
+| Guardrail                | Behavior                                             |
+| ------------------------ | ---------------------------------------------------- |
+| Low retrieval confidence | Refuse if similarity < threshold (`RETRIEVAL_EMPTY`) |
+| Response length cap      | Limit answers to 500 words                           |
+| Output validation        | Block prompt/system leakage                          |
+
+---
+
+### **Execution Limits**
+
+| Limit       | Behavior                                          |
+| ----------- | ------------------------------------------------- |
+| LLM timeout | Abort generation after 30 seconds (`LLM_TIMEOUT`) |
+
+---
+
+## 🔐 Prompt Injection Defenses
+
+The system protects against malicious instructions via:
+
+1. **System Prompt Hardening**
+   - Explicit behavioral constraints
+   - Never reveal system prompts
+
+2. **Input Sanitization**
+   - Blocks phrases like:
+     - "Ignore previous instructions"
+     - "Print system prompt"
+
+3. **Instruction–Data Separation**
+   - Retrieved context wrapped in:
+     ```
+     <retrieved_context> ... </retrieved_context>
+     ```
+
+4. **Output Validation**
+   - Blocks:
+     - System prompt leakage
+     - Meta-instruction responses
+
+---
+
+## 📊 Evaluation Metrics
+
+### ✅ Retrieval Relevance
+
+- Logs top similarity score per query
+- Computes average similarity score
+
+### ✅ Faithfulness Check
+
+- LLM verifies: Is the answer supported by retrieved context? YES / NO
+
+---
+
+## 🧪 Test Scenarios
+
+The system automatically evaluates:
+
+### **Normal Queries**
+
+- School bus rules
+- Pedestrian yielding
+- Emergency vehicle response
+
+### **Prompt Injection Attacks**
+
+- Instruction override attempts
+- System prompt extraction
+- Role reassignment attacks
+
+### **Off-Topic & Edge Cases**
+
+- Unrelated questions
+- Queries with PII
+- Empty query
+
+---
+
+## 📁 Output
+
+Results saved to: output/results.txt
+
+Each query logs:
+
+- Query
+- Guardrails Triggered
+- Error Code
+- Retrieved Chunks
+- Similarity Score
+- Answer
+- Faithfulness Score
+
+---
+
+## ⚙️ Setup Instructions
+
+### **1️⃣ Clone Repository**
 
 ```bash
-git clone https://github.com/zilongwang-SMU/Rag_project.git
-cd Rag_project
+git clone https://github.com/yourusername/Guardrails-for-rag.git
+cd Guardrails-for-rag
 ```
 
-### **2️⃣ Create virtual environment**
-
-Windows (PowerShell):
+### **2️⃣ Create Virtual Environment (Python 3.11 recommended)**
 
 ```bash
-python -m venv venv
+py -3.11 -m venv venv
 venv\Scripts\activate
 ```
 
-macOS / Linux:
+### **3️⃣ Install Dependencies**
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-
+pip install -U pip setuptools wheel
+pip install -r requirement.txt
 ```
 
-### **3️⃣ Install dependencies**
+If needed:
 
 ```bash
-pip install -U pip
-pip install langchain langchain-community langchain-text-splitters chromadb python-dotenv requests transformers torch
+pip install torch transformers sentencepiece chromadb langchain langchain-community langchain-text-splitters python-dotenv requests numpy xxhash orjson grpcio
 ```
 
-### **4️⃣ Configure API Keys**
+### **4️⃣ Configure Environment Variables**
 
-Create a .env file in the project root:
-JINA_API_KEY=your_jina_api_key_here
-Get your key from:
+Create .env file:
+JINA_API_KEY=your_api_key_here
 
-👉 https://jina.ai/api-dashboard/key-manager
+### **5️⃣ Add Source Document**
 
-⚠️ Do NOT use quotes.
+Place handbook PDF in: data/DH-Chapter2.pdf
 
-### **5️⃣ Add the PDF**
-
-Place the required file inside /data:
-data/DH-Chapter2.pdf
-
-### **▶️ Running the Project**
+### **▶️ Running the System**
 
 ```bash
 python main.py
 ```
-
-### **💬 How to use this program?**
-
-Ask questions via command line input
-
-### **📄 Output File**
-
-Results are saved to:
-
-```bash
-output/results.txt
-```
-
-# Guardrails-for-rag
